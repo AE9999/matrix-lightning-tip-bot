@@ -255,7 +255,7 @@ pub mod lnbits_client {
         pub async fn pay(&self,
                          wallet: &Wallet,
                          payment_params: &PaymentParams) -> Result<(), reqwest::Error> {
-            let response = reqwest::Client::new().post([self.url.as_str(), "/api/v1/payments"].join(""))
+            reqwest::Client::new().post([self.url.as_str(), "/api/v1/payments"].join(""))
                 .header((self.header[0]).0.as_str(), (self.header[0]).1.as_str())
                 .header((self.header[1]).0.as_str(), (self.header[1]).1.as_str())
                 .header((self.header[2]).0.as_str(), wallet.admin_key.clone())
