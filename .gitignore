@@ -1,7 +1,12 @@
-/target
-/db
-/conf
+build
+target
+db
+conf
+gradle
+.gradle
 Cargo.lock
 *.iml
 *.sh
 .idea/
+example-configs
+example-dbs

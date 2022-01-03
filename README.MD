@@ -36,7 +36,8 @@ Running your own instance is done by:
 ### Build Docker image
 Building the Docker image is done with:
 1. Install Docker (https://www.docker.com/)
-2. Run `docker build -t matrix-lightning-tip-bot .`  to build the docker image
+2. Run `./gradlew build`  to build the docker image. On Windows this might need the `--project-cache-dir=../cache` option due to caching issues.
+   
 
 ### Generate local sqlite Database file
 Generating the local Database file is done with:

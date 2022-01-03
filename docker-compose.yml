@@ -1,0 +1,9 @@
+version: '3.7'
+services:
+  matrix-lighting-tip-bot:
+    image: matrix-lightning-tip-bot
+    volumes:
+      - ${CONFIG_DIR}:/config
+      - ${DATABASE_DIR}:/db
+    command:
+      - lnbits-matrix-bot ${CONFIG_FILE}
