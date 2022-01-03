@@ -34,10 +34,15 @@ Running your own instance is done by:
 4. Running a MLTB
 
 ### Build Docker image
-Run `docker build -t matrix-lightning-tip-bot .` to build the docker image
+Building the Docker image is done with:
+1. Install Docker (https://www.docker.com/)
+2. Run `docker build -t matrix-lightning-tip-bot .`  to build the docker image
 
 ### Generate local sqlite Database file
-Run `diesel migration run --database-url=db.db` to generate a local sqlite Database file.
+Generating the local Database file is done with:
+1. Install Rust (https://www.rust-lang.org/tools/install)
+2. Install diesel (sqlite only) by running `cargo install diesel_cli --no-default-features --features sqlite`. (On ubuntu required installing the 'libsqlite3-dev' package) 
+3. Run `diesel migration run --database-url=db.db` to generate a local sqlite Database file.
 
 ### Construct a config file
 Construct a file `config.conf` with the following entries:
@@ -52,6 +57,9 @@ Construct a file `config.conf` with the following entries:
 ### Running
 Run `docker run --rm  -v <path-to-config-directory>:/config/  -v <path-to-database-directory>:/db  matrix-lightning-tip-bot  matrix-lightning-tip-bot @/config/config.conf` to start the MLTB container
 
+# Contact 
+We have public matrix room at `#matrix-lightning-tip-bot-discussion:s-software-solutions.nl`  
+
 # Warning
 This software is in 'beta', don't put in more than you are willing to lose. For now this bot assumes it's the only one of its kind in chat. Multiple versions shouldn't matter as it won't spend money you don't have, but it can be annoying.
 
@@ -61,4 +69,4 @@ Non lightning BTC donations are welcome at `bc1q72dzh04fwxx780w05twtmn5fxzegpawd
 # Thanks
 A big thanks the people over at LightningTipBot. This project is in no way ment to replace or critique the great work they have been doing, merely to give more people access to the lightning network.
 
-Also we would like to give a thank the people of LNbits and Umbrel (https://getumbrel.com/) for their amazing free products, this bot wouldn't have existed without their work.  
+Also, we would like to give a thank the people of LNbits and Umbrel (https://getumbrel.com/) for their amazing free products, this bot wouldn't have existed without their work.  

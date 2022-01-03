@@ -1,0 +1,7 @@
+/target
+/db
+/conf
+Cargo.lock
+*.iml
+*.sh
+.idea/
