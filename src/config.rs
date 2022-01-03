@@ -87,7 +87,8 @@ pub mod config {
             .arg(Arg::with_name("btc-donation-address")
                 .long("btc-donation-address")
                 .takes_value(true)
-                .required(true)
+                .default_value("bc1q72dzh04fwxx780w05twtmn5fxzegpawdn5zg3g")
+                .required(false)
                 .help("The BTC address to display for donations"))
 
             .get_matches_from(args);
