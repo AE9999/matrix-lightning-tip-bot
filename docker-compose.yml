@@ -5,5 +5,4 @@ services:
     volumes:
       - ${CONFIG_DIR}:/config
       - ${DATABASE_DIR}:/db
-    command:
-      - matrix-lightning-tip-bot ${CONFIG_FILE}
+    command: matrix-lightning-tip-bot ${CONFIG_FILE}

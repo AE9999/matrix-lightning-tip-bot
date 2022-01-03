@@ -37,7 +37,6 @@ Running your own instance is done by:
 Building the Docker image is done with:
 1. Install Docker (https://www.docker.com/)
 2. Run `./gradlew build`  to build the docker image. On Windows this might need the `--project-cache-dir=../cache` option due to caching issues.
-   
 
 ### Generate local sqlite Database file
 Generating the local Database file is done with:
@@ -56,7 +55,15 @@ Construct a file `config.conf` with the following entries:
 ```
 
 ### Running
-Run `docker run --rm  -v <path-to-config-directory>:/config/  -v <path-to-database-directory>:/db  matrix-lightning-tip-bot  matrix-lightning-tip-bot @/config/config.conf` to start the MLTB container
+Run `docker run --rm  -v <path-to-config-directory>:/config/  -v <path-to-database-directory>:/db  matrix-lightning-tip-bot  matrix-lightning-tip-bot @/config/config.conf` to start the MLTB container. 
+
+It is also possible to use the docker-compose file. This will require .env file containing the entries 
+```
+CONFIG_DIR=<path-to-config-directory>
+DATABASE_DIR=<path-to-database-directory>
+CONFIG_FILE=@/config/config.conf
+```
+See https://docs.docker.com/compose/environment-variables/ for more information.
 
 # Contact 
 We have public matrix room at `#matrix-lightning-tip-bot-discussion:s-software-solutions.nl`  
