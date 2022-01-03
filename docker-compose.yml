@@ -6,4 +6,4 @@ services:
       - ${CONFIG_DIR}:/config
       - ${DATABASE_DIR}:/db
     command:
-      - lnbits-matrix-bot ${CONFIG_FILE}
+      - matrix-lightning-tip-bot ${CONFIG_FILE}
