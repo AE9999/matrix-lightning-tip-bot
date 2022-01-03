@@ -28,15 +28,16 @@ impl BusinessLogicContext {
     }
 
     pub fn get_help_content() -> String {
-        "!tip      - Reply to a message to tip it: !tip <amount> [<memo>]\n\
-         !balance - Check your balance: !balance\n\
-         !send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com> [<memo>]\n\
-         !invoice - Receive over Lightning: !invoice <amount> [<memo>]\n\
-         !pay     - Pay  over Lightning: !pay <invoice>\n\
-         !help    - Read this help.\n\
-         !donate  - Donate to the matrix-lighting-tip-bot project: !donate <amount>\n\
-         !party   - Start a Party: !party\n\
-         !version - Print the version of this bot !version ".to_string()
+         format!("Matrix-Lightning-Tip-Bot {:?}  \n \
+                 !tip      - Reply to a message to tip it: !tip <amount> [<memo>]\n\
+                 !balance - Check your balance: !balance\n\
+                 !send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com> [<memo>]\n\
+                 !invoice - Receive over Lightning: !invoice <amount> [<memo>]\n\
+                 !pay     - Pay  over Lightning: !pay <invoice>\n\
+                 !help    - Read this help.\n\
+                 !donate  - Donate to the matrix-lighting-tip-bot project: !donate <amount>\n\
+                 !party   - Start a Party: !party\n\
+                 !version - Print the version of this bot\n", env!("CARGO_PKG_VERSION"))
     }
 
     pub async fn processing_command(&self,

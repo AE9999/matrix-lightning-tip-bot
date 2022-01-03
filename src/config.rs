@@ -10,7 +10,8 @@ pub mod config {
         pub lnbits_x_api_key: String,
         pub database_url: String,
         pub debug_level: String,
-        pub donate_user: String
+        pub donate_user: String,
+        pub btc_donation_address: String
     }
 
     impl Config {
@@ -20,7 +21,8 @@ pub mod config {
                lnbits_x_api_key: &str,
                database_url: &str,
                debug_level: &str,
-               donate_user: &str) -> Config {
+               donate_user: &str,
+               btc_donation_address: &str) -> Config {
             Config {
                 matrix_server: matrix_server.to_string(),
                 matrix_password: matrix_password.to_string(),
@@ -29,6 +31,7 @@ pub mod config {
                 database_url: database_url.to_string(),
                 debug_level: debug_level.to_string(),
                 donate_user: donate_user.to_string(),
+                btc_donation_address: btc_donation_address.to_string()
             }
         }
     }
@@ -81,6 +84,12 @@ pub mod config {
                 .takes_value(true)
                 .required(true)
                 .help("The user receiving any donations"))
+            .arg(Arg::with_name("btc-donation-address")
+                .long("btc-donation-address")
+                .takes_value(true)
+                .required(true)
+                .help("The BTC address to display for donations"))
+
             .get_matches_from(args);
 
         let matrix_server = matches.value_of("matrix-server").unwrap();
@@ -97,12 +106,15 @@ pub mod config {
 
         let donate_user = matches.value_of("donate-user").unwrap();
 
+        let btc_donation_address = matches.value_of("btc-donation-address").unwrap();
+
         Config::new(matrix_server,
                     matrix_password,
                     lnbits_url,
                     lnbits_x_api_key,
                     database_url,
                     debug_level,
-                    donate_user)
+                    donate_user,
+                    btc_donation_address)
     }
 }
