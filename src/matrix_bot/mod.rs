@@ -21,7 +21,7 @@ pub mod matrx_bot {
     use tokio::time::{sleep, Duration};
     use mime;
     use matrix_sdk::room::Joined;
-    use matrix_sdk::ruma::{EventId, ServerName};
+    use matrix_sdk::ruma::{EventId, MilliSecondsSinceUnixEpoch, ServerName};
     use matrix_sdk::ruma::events::room::message::Relation::Reply;
     use simple_error::{bail, try_with};
     use simple_error::SimpleError;
@@ -56,6 +56,8 @@ pub mod matrx_bot {
         }
 
         if let Room::Invited(ref room) = room {
+
+
             log::info!("Autojoining room {}", room.room_id());
             let mut delay = 2;
 
@@ -422,13 +424,18 @@ pub mod matrx_bot {
 
             log::info!("Performing init ..");
 
+            // Dangerous
+
             self.client.register_event_handler(auto_join).await;
 
             let business_logic_contex = self.business_logic_contex.clone();
             let bot_name = self.bot_name().clone();
+            let current_time = MilliSecondsSinceUnixEpoch::now();
+
             self.client.register_event_handler({
                 let business_logic_contex = business_logic_contex.clone();
                 let bot_name = bot_name.clone();
+                let current_time = current_time.clone();
                 move |event: SyncMessageEvent<MessageEventContent>, room: Room|{
                     let business_logic_contex = business_logic_contex.clone();
                     let bot_name = bot_name.clone();
@@ -440,6 +447,11 @@ pub mod matrx_bot {
                             let original_event = reply_event_id(&(event.content.relates_to));
                             let extracted_msg_body = extract_body(&event);
                             if extracted_msg_body.msg_body.is_none() { return } // No body to process
+
+                            if current_time > event.origin_server_ts {
+                                // Event was before I joined, can happen in public rooms.
+                                return;
+                            }
 
                             let plain_message_body = extracted_msg_body.msg_body.clone().unwrap();
 
@@ -461,6 +473,8 @@ pub mod matrx_bot {
                                                                                   &event,
                                                                                   original_event,
                                                                                   &extracted_msg_body).await;
+
+
                             match command {
                                 Err(error) => {
                                     log::warn!("Error occurred while extracting command {:?}..", error);
