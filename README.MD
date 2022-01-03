@@ -1,12 +1,13 @@
 # About
 Matrix-Lightning-Tip-Bot (MLTB) is a lightning network BTC tip bot for the matrix network. It is inspired by the LightningTipBot Telegram project at https://github.com/LightningTipBot/LightningTipBot.
 
-# How to use 
+# Warning
+While we have tested this bot, it is in 'beta', don't put in more than you are willing to lose.
 
+# How to use
 MLTB can either be used directly or be self run. Running your own instance requires access to a LNbits (https://lnbits.com/) instance.
 
 ## Directly
-
 We are running a dedicated MLTB instance over at @matrix-lightning-tip-bot:matrix.org. Invite it to a room to get started immediately. After joining the bot should display the possible commands which are:
 
 ```
@@ -24,7 +25,6 @@ We are running a dedicated MLTB instance over at @matrix-lightning-tip-bot:matri
 Our MLTB instance runs on this LightningNode https://amboss.space/node/031017e6563c2ba50cf43300b8ac67e6fe577646df76e1216368dce75ac8c3457d
 
 ## Running your own instance
-
 We recommend running your own MLTB instance using Docker https://www.docker.com/. 
 
 Running your own instance is done by:
@@ -66,10 +66,7 @@ CONFIG_FILE=@/config/config.conf
 See https://docs.docker.com/compose/environment-variables/ for more information.
 
 # Contact 
-We have public matrix room at `#matrix-lightning-tip-bot-discussion:s-software-solutions.nl`  
-
-# Warning
-This software is in 'beta', don't put in more than you are willing to lose. For now this bot assumes it's the only one of its kind in chat. Multiple versions shouldn't matter as it won't spend money you don't have, but it can be annoying.
+We have public matrix room at `#matrix-lightning-tip-bot-discussion:s-software-solutions.nl`
 
 # BTC Donations
 Non lightning BTC donations are welcome at `bc1q72dzh04fwxx780w05twtmn5fxzegpawdn5zg3g`
@@ -78,3 +75,7 @@ Non lightning BTC donations are welcome at `bc1q72dzh04fwxx780w05twtmn5fxzegpawd
 A big thanks the people over at LightningTipBot. This project is in no way ment to replace or critique the great work they have been doing, merely to give more people access to the lightning network.
 
 Also, we would like to give a thank the people of LNbits and Umbrel (https://getumbrel.com/) for their amazing free products, this bot wouldn't have existed without their work.  
+
+# Scheduled TODOs
+- Inform users about donated funds.
+- Graceliously handle multiple bots is a single
