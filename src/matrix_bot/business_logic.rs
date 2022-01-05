@@ -6,7 +6,7 @@ use crate::{Config, DataLayer, LNBitsClient};
 use crate::data_layer::data_layer::NewMatrixId2LNBitsId;
 use crate::lnbits_client::lnbits_client::{CreateUserArgs, InvoiceParams, LNBitsUser, PaymentParams, Wallet, WalletInfo};
 use crate::matrix_bot::commands::{Command, CommandReply};
-use crate::matrix_bot::matrx_bot::LNBitsId;
+use crate::matrix_bot::matrix_bot::LNBitsId;
 
 #[derive(Clone)]
 pub struct BusinessLogicContext  {

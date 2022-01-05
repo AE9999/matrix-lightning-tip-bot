@@ -13,7 +13,7 @@ use crate::config::config::{config_from_cmd, Config};
 use crate::data_layer::data_layer::DataLayer;
 
 use crate::lnbits_client::lnbits_client::LNBitsClient;
-use crate::matrix_bot::matrx_bot::MatrixBot;
+use crate::matrix_bot::matrix_bot::MatrixBot;
 
 use simple_logger::SimpleLogger;
 use std::str::FromStr;

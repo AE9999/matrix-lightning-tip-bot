@@ -1,7 +1,7 @@
 mod commands;
 mod business_logic;
 
-pub mod matrx_bot {
+pub mod matrix_bot {
     use std::io::Cursor;
     use matrix_sdk::{room::Room, Client, SyncSettings, ruma::{UserId,
                                                               events::{SyncMessageEvent,
@@ -13,7 +13,7 @@ pub mod matrx_bot {
                                                               api::client::r0::room::get_room_event
     }, RoomMember};
     use matrix_sdk::ruma::events::room::message::{MessageFormat, MessageType, Relation, TextMessageEventContent};
-    use crate::matrix_bot::matrx_bot::get_room_event::Request;
+    use crate::matrix_bot::matrix_bot::get_room_event::Request;
 
     use crate::{Config, DataLayer};
     use crate::lnbits_client::lnbits_client::LNBitsClient;
