@@ -28,26 +28,26 @@ pub mod data_layer {
         }
 
         pub fn lnbits_id_exists_for_matrix_id(&self, matrix_id_: &str) -> bool {
-            let connection = self.establish_connection();
+            let mut connection = self.establish_connection();
             let result = matrix_id_2_lnbits_id.find(matrix_id_)
-                                                  .load::<MatrixId2LNBitsId>(&connection)
+                                                  .load::<MatrixId2LNBitsId>(&mut connection)
                                                   .expect("Error looking up stuff");
             result.len() > 0
         }
 
         pub fn insert_matrix_id_2_lnbits_id(&self, new_matrix_id_2_lnbits_id: NewMatrixId2LNBitsId ) {
 
-            let connection = self.establish_connection();
+            let mut connection = self.establish_connection();
             diesel::insert_into(schema::matrix_id_2_lnbits_id::table)
                    .values(&new_matrix_id_2_lnbits_id)
-                   .execute(&connection)
+                   .execute(&mut connection)
                    .expect("Error saving new matrix_id_2_ln_bits_id");
         }
 
         pub fn lnbits_id_for_matrix_id(&self, matrix_id_: &str) -> LNBitsId {
-            let connection = self.establish_connection();
+            let mut connection = self.establish_connection();
             let mut result = matrix_id_2_lnbits_id.find(matrix_id_)
-                                                  .load::<MatrixId2LNBitsId>(&connection)
+                                                  .load::<MatrixId2LNBitsId>(&mut connection)
                                                   .expect("Error looking up stuff");
             result.remove(0).get_lnbits_id()
         }

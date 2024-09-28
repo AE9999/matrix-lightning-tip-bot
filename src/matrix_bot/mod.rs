@@ -2,31 +2,28 @@ mod commands;
 mod business_logic;
 
 pub mod matrix_bot {
-    use std::io::Cursor;
-    use matrix_sdk::{room::Room, Client, SyncSettings, ruma::{UserId,
-                                                              events::{SyncMessageEvent,
-                                                                       MessageEvent,
-                                                                       AnyMessageEventContent,
-                                                                       room::message::MessageEventContent, StrippedStateEvent,
-                                                                       room::member::MemberEventContent
-                                                              },
-                                                              api::client::r0::room::get_room_event
-    }, RoomMember};
-    use matrix_sdk::ruma::events::room::message::{MessageFormat, MessageType, Relation, TextMessageEventContent};
-    use crate::matrix_bot::matrix_bot::get_room_event::Request;
+
+    use matrix_sdk::{config::SyncSettings, ruma::events::room::member::StrippedRoomMemberEvent, Client, Room, RoomMemberships, RoomState};
+
+    use matrix_sdk::attachment::AttachmentConfig;
+    use matrix_sdk::room::RoomMember;
+    use matrix_sdk::ruma::events::room::message::{AddMentions, ForwardThread, MessageFormat, OriginalRoomMessageEvent, OriginalSyncRoomMessageEvent, Relation, RoomMessageEventContent, TextMessageEventContent, MessageType, RoomMessageEventContentWithoutRelation};
 
     use crate::{Config, DataLayer};
     use crate::lnbits_client::lnbits_client::LNBitsClient;
     use crate::matrix_bot::business_logic::BusinessLogicContext;
     use tokio::time::{sleep, Duration};
     use mime;
-    use matrix_sdk::room::Joined;
-    use matrix_sdk::ruma::{EventId, MilliSecondsSinceUnixEpoch, ServerName};
+    use matrix_sdk::ruma::{MilliSecondsSinceUnixEpoch, OwnedEventId, OwnedUserId, ServerName, UserId};
+    
     use matrix_sdk::ruma::events::room::message::Relation::Reply;
     use simple_error::{bail, try_with};
     use simple_error::SimpleError;
+    use url::Url;
     use crate::matrix_bot::commands::{balance, Command, donate, help, invoice, party, pay, send, tip, version};
     pub use crate::data_layer::data_layer::LNBitsId;
+
+
 
     #[derive(Debug)]
     struct ExtractedMessageBody {
@@ -48,43 +45,42 @@ pub mod matrix_bot {
         }
     }
 
-    async fn auto_join(room_member: StrippedStateEvent<MemberEventContent>,
+    async fn auto_join(room_member: StrippedRoomMemberEvent,
                        client: Client,
-                       room: Room) {
-        if room_member.state_key != client.user_id().await.unwrap() {
+                       room: Room,
+                       business_logic_context: BusinessLogicContext) {
+        if room_member.state_key != client.user_id().unwrap() {
             return;
         }
 
-        if let Room::Invited(ref room) = room {
+        log::info!("Autojoining room {}", room.room_id());
+        let mut delay = 2;
 
+        while let Err(err) = room.join().await {
+            // retry autojoin due to synapse sending invites, before the
+            // invited user can join for more information see
+            // https://github.com/matrix-org/synapse/issues/4345
+            log::error!("Failed to join room {} ({:?}), retrying in {}s", room.room_id(), err, delay);
 
-            log::info!("Autojoining room {}", room.room_id());
-            let mut delay = 2;
+            sleep(Duration::from_secs(delay)).await;
+            delay *= 2;
 
-            while let Err(err) = room.accept_invitation().await {
-                // retry autojoin due to synapse sending invites, before the
-                // invited user can join for more information see
-                // https://github.com/matrix-org/synapse/issues/4345
-                log::error!("Failed to join room {} ({:?}), retrying in {}s", room.room_id(), err, delay);
-
-                sleep(Duration::from_secs(delay)).await;
-                delay *= 2;
-
-                if delay > 3600 {
-                    log::error!("Can't join room {} ({:?})", room.room_id(), err);
-                    break;
-                }
+            if delay > 3600 {
+                log::error!("Can't join room {} ({:?})", room.room_id(), err);
+                break;
             }
-            log::info!("Successfully joined room {}", room.room_id());
         }
 
-        // Upon succesfull join send a single message
-        let content = AnyMessageEventContent::RoomMessage(MessageEventContent::text_plain(
-            "Thanks for inviting me. I support the following commands:\n".to_owned() +
-                  BusinessLogicContext::get_help_content().as_str()
-        ));
+        log::info!("Successfully joined room {}", room.room_id());
 
-        let result = client.room_send(room.room_id(), content, None).await;
+        // Upon succesfull join send a single message
+        let content = RoomMessageEventContent::text_plain(
+            "Thanks for inviting me. I support the following commands:\n".to_owned() +
+                  business_logic_context.get_help_content().as_str()
+        );
+
+        let result = room.send(content).await;
+
         match result {
             Err(error) => {
                 log::warn!("Could not send welcome message due to {:?}..", error);
@@ -93,7 +89,7 @@ pub mod matrix_bot {
         }
     }
 
-    fn reply_event_id(option: &Option<Relation>) -> Option<EventId> {
+    fn reply_event_id(option: Option<&Relation<RoomMessageEventContentWithoutRelation>>) -> Option<OwnedEventId> {
         if option.is_none() {  None }
         else {
             match option.as_ref().unwrap() {
@@ -111,30 +107,28 @@ pub mod matrix_bot {
         msg_body.split('\n').last().unwrap().to_string()
     }
 
-    async fn extract_command(room: &Joined,
+    async fn extract_command(room: &Room,
                              sender: &str,
-                             event: &SyncMessageEvent<MessageEventContent>,
-                             original_event: Option<EventId>,
+                             event: &OriginalSyncRoomMessageEvent,
+                             original_event: Option<OwnedEventId>,
                              extracted_msg_body: &ExtractedMessageBody) -> Result<Command, SimpleError> {
-        let msg_body = extracted_msg_body.clone().msg_body.clone().unwrap().to_lowercase(); // We don't care about the case of the command.
+        let msg_body = extracted_msg_body.msg_body.clone().unwrap().to_lowercase(); // We don't care about the case of the command.
 
         if last_line(msg_body.as_str()).starts_with("!tip") && !original_event.is_none() {
-            let original_event = room.event(Request::new(&room.room_id(),
-                                                         &original_event.unwrap())).await;
+            let original_event = room.event(&original_event.unwrap()).await;
             match original_event {
                 Ok(original_event_) => {
                     let answer = original_event_.event.deserialize();
-                    let replyee: UserId = match answer {
+                    let replyee: OwnedUserId = match answer {
                         Ok(any_room_event) => {
-                            any_room_event.sender().clone()
+                            any_room_event.sender().to_owned()
                         }
                         _ => {
                             bail!("Could not parse answer {:?}", answer)
                         }
                     };
                     tip(sender,
-                        event.event_id.as_str(),
-                         last_line(msg_body.as_str()).as_str(),
+                        last_line(msg_body.as_str()).as_str(),
                         replyee.as_str())
                 },
                 Err(simple_error) => {
@@ -143,16 +137,16 @@ pub mod matrix_bot {
                 }
             }
         }  else if msg_body.starts_with("!balance") {
-            balance(sender, event.event_id.as_str())
+            balance(sender)
         } else if msg_body.starts_with("!send") {
             let msg_body = preprocess_send_message(&extracted_msg_body, room).await;
             match msg_body {
                 Ok(msg_body) => {
-                    send(sender, event.event_id.as_str(), msg_body.as_str())
+                    send(sender, msg_body.as_str())
                 },
                 Err(_) => {
-                    let error_message = "Sorry I did not recognize the username (or two or more users were possible candidates).\n \
-                                              Please write out the user in full. I.e. like @username:example-server.com.";
+                    let error_message = "Please use <amount> <username>.\n \
+                                              If usernames are ambiguous write them out in full. I.e. like @username:example-server.com.";
                     let result = send_reply_to_event_in_room(&room,
                                                                                &event,
                                                                           error_message).await;
@@ -166,17 +160,17 @@ pub mod matrix_bot {
                 }
             }
         } else if msg_body.starts_with("!invoice") {
-            invoice(sender, event.event_id.as_str(), msg_body.as_str())
+            invoice(sender, msg_body.as_str())
         } else if msg_body.starts_with("!pay") {
-            pay(sender, event.event_id.as_str(), msg_body.as_str())
+            pay(sender, msg_body.as_str())
         } else if msg_body.starts_with("!help") {
-            help(sender, event.event_id.as_str())
+            help()
         } else if msg_body.starts_with("!donate") {
-            donate(sender, event.event_id.as_str(), msg_body.as_str())
+            donate(sender, msg_body.as_str())
         } else if msg_body.starts_with("!party") {
-            party(sender, event.event_id.as_str())
+            party()
         } else if msg_body.starts_with("!version") {
-            version(sender, event.event_id.as_str())
+            version()
         } else {
             Ok(Command::None)
         }
@@ -184,7 +178,7 @@ pub mod matrix_bot {
 
     // TODO(AE): Terrible code refactor
     async fn find_user_in_room(partial_user_id: &str,
-                               room: &Joined) -> Result<Option<UserId>, SimpleError> {
+                               room: &Room) -> Result<Option<OwnedUserId>, SimpleError> {
 
         log::info!("Trying to find {:?} in room ..", partial_user_id);
         if partial_user_id.is_empty() { return Ok(None) }
@@ -202,10 +196,11 @@ pub mod matrix_bot {
         let partial_user_id: String = if partial_user_id.chars().next().unwrap() == '@' { partial_user_id[1..].to_string() }
                                       else { partial_user_id.to_string() };
 
-        let mut matched_user_id: Option<UserId> = None;
+        let mut matched_user_id: Option<OwnedUserId> = None;
 
-        let members: Vec<RoomMember> = try_with!(room.members_no_sync().await,
+        let members: Vec<RoomMember> = try_with!(room.members_no_sync(RoomMemberships::JOIN).await,
                                                  "Could not get room members");
+
         for member in members {
             log::info!("comparing {:?} & {:?} vs {:?}",
                        member.user_id(),
@@ -213,7 +208,7 @@ pub mod matrix_bot {
                        partial_user_id);
             if member.user_id().localpart() == partial_user_id {
                 if matched_user_id.is_none() {
-                    matched_user_id = Some(member.user_id().clone())
+                    matched_user_id = Some(member.user_id().to_owned());
                 } else {
                     log::info!("Found multiple possible matching user names, not returning anything");
                     return Ok(None)
@@ -224,7 +219,7 @@ pub mod matrix_bot {
         Ok(matched_user_id)
     }
 
-    fn try_to_parse_into_full_username(username: &str) -> Option<UserId> {
+    fn try_to_parse_into_full_username(username: &str) -> Option<OwnedUserId> {
         log::info!("Trying to parse {:?} into a full username ..", username);
         let split: Vec<&str> = username.split(':').collect();
         if split.len() != 2 {
@@ -246,7 +241,7 @@ pub mod matrix_bot {
     }
 
     async fn preprocess_send_message(extracted_msg_body: &ExtractedMessageBody,
-                                     room: &Joined) -> Result<String, SimpleError> {
+                                     room: &Room) -> Result<String, SimpleError> {
 
         log::info!("Preprocessing {:?} for send ..", extracted_msg_body);
 
@@ -257,7 +252,7 @@ pub mod matrix_bot {
             bail!("Not a valid send message")
         }
 
-        let mut target_id: Option<UserId> = try_to_parse_into_full_username(split_message[2]);
+        let mut target_id: Option<OwnedUserId> = try_to_parse_into_full_username(split_message[2]);
         target_id = if target_id.is_some() { target_id }
                     else {
                         try_with!(find_user_in_room(split_message[2], room).await,
@@ -291,7 +286,7 @@ pub mod matrix_bot {
         Ok(preprocessed_message)
     }
 
-    fn extract_user_from_formatted_msg_body(formatted_msg_body: &str) -> Option<UserId> {
+    fn extract_user_from_formatted_msg_body(formatted_msg_body: &str) -> Option<OwnedUserId> {
 
         let dom = tl::parse(formatted_msg_body,tl::ParserOptions::default());
         let mut img = dom.query_selector("a[href]").unwrap();
@@ -322,64 +317,65 @@ pub mod matrix_bot {
 
         let complete_id = ("@".to_owned() + r[1]).to_string();
 
-        let user_id = UserId::try_from(complete_id);
+        let user_id = OwnedUserId::try_from(complete_id);
 
         if user_id.is_ok() {
-            Some(user_id.unwrap())
+            Some(user_id.unwrap().to_owned())
         } else {
             None
         }
     }
 
-    fn extract_body(event: &SyncMessageEvent<MessageEventContent>) -> ExtractedMessageBody {
-        if let SyncMessageEvent {
-            content:
-            MessageEventContent {
-                msgtype: MessageType::Text(TextMessageEventContent { body: msg_body,
-                                                                     formatted,
-                                                                     .. }),
-                ..
-            },
+    fn extract_body(event: &OriginalSyncRoomMessageEvent) -> ExtractedMessageBody {
+        if let RoomMessageEventContent {
+            msgtype: MessageType::Text(TextMessageEventContent { body: msg_body, formatted, .. }),
             ..
-        } = event
+        } = &event.content
         {
-            let formatted_message_body: Option<String> = if formatted.is_some() {
-                let unwrapped = formatted.clone().unwrap();
+            // Check if the message has formatted content
+            let formatted_message_body: Option<String> = formatted.as_ref().and_then(|unwrapped| {
                 match unwrapped.format {
-                    MessageFormat::Html => { Some(unwrapped.body) } // We only support html for now
-                    _ => { None }
+                    MessageFormat::Html => Some(unwrapped.body.clone()), // Only support HTML
+                    _ => None,
                 }
-            } else {
-                None
-            };
+            });
 
+            // Return the extracted message body
             ExtractedMessageBody::new(Some(msg_body.clone()), formatted_message_body)
         } else {
             log::warn!("could not parse body..");
             ExtractedMessageBody::empty()
         }
     }
-
-    async fn send_reply_to_event_in_room(room: &Joined,
-                                         event: &SyncMessageEvent<MessageEventContent>,
+    async fn send_reply_to_event_in_room(room: &Room,
+                                         event: &OriginalSyncRoomMessageEvent,
                                          reply: &str) -> Result<(), SimpleError> {
-        let message_event = MessageEvent {
+        let original_room_message_event = OriginalRoomMessageEvent {
             content: event.content.clone(),
             event_id: event.event_id.clone(),
-            sender: event.sender.clone(),
             origin_server_ts: event.origin_server_ts,
-            room_id: room.room_id().clone(),
-            unsigned: event.unsigned.clone()
+            room_id: room.room_id().to_owned(),
+            sender: event.sender.clone(),
+            unsigned: event.unsigned.clone(),
         };
 
-        let content = AnyMessageEventContent::RoomMessage(MessageEventContent::text_reply_plain(
-            reply,
-            &message_event
-        ));
+        let reply_message = RoomMessageEventContent::text_plain(reply);
+
+        let content = reply_message.make_reply_to(
+            &original_room_message_event,
+            ForwardThread::Yes,
+            AddMentions::No
+        );
 
         log::info!("Replying with content {:?} ..", content);
-        try_with!(room.send(content, None).await, "Could not send message");
+
+        // Send the message to the room
+        room.send(content).await.map_err(|e| {
+            SimpleError::new(format!("Could not send message: {:?}", e))
+        })?;
+
         Ok(())
+
     }
 
     pub struct MatrixBot {
@@ -394,18 +390,11 @@ pub mod matrix_bot {
                          lnbits_client: LNBitsClient,
                          config: &Config ) -> matrix_sdk::Result<MatrixBot> {
 
-            let user_id = UserId::try_from(config.matrix_server.clone())?;
+            let homeserver_url =
+                Url::parse(config.matrix_server.as_str())
+                    .expect("Couldn't parse the homeserver URL");
 
-            log::info!("Creating client ..");
-
-            let client = Client::new_from_user_id(user_id.clone()).await?;
-
-            log::info!("Loging client in ..");
-
-            client.login(user_id.localpart(),
-                                    config.matrix_password.as_str(),
-                                    None,
-                                    None).await?;
+            let client = Client::new(homeserver_url).await?;
 
             let matrix_bot = MatrixBot {
                 business_logic_contex: BusinessLogicContext::new(lnbits_client,
@@ -415,8 +404,6 @@ pub mod matrix_bot {
                 config: config.clone()
             };
 
-            log::info!("Done with preliminary steps ..");
-
             Ok(matrix_bot)
         }
 
@@ -425,136 +412,151 @@ pub mod matrix_bot {
             log::info!("Performing init ..");
 
             // Dangerous
+            let business_logic_context = self.business_logic_contex.clone();
 
-            self.client.register_event_handler(auto_join).await;
+            self.client.add_event_handler({
+                let business_logic_context = business_logic_context.clone();
+                move |room_member: StrippedRoomMemberEvent, client: Client, room: Room| {
+                    let business_logic_context = business_logic_context.clone();
+                    async move {
+                        auto_join(room_member, client, room, business_logic_context).await;
+                    }
+                }
+            });
 
             let business_logic_contex = self.business_logic_contex.clone();
             let bot_name = self.bot_name().clone();
             let current_time = MilliSecondsSinceUnixEpoch::now();
 
-            self.client.register_event_handler({
+            self.client.add_event_handler({
                 let business_logic_contex = business_logic_contex.clone();
                 let bot_name = bot_name.clone();
                 let current_time = current_time.clone();
-                move |event: SyncMessageEvent<MessageEventContent>, room: Room|{
+                move |event: OriginalSyncRoomMessageEvent, room: Room|{
                     let business_logic_contex = business_logic_contex.clone();
                     let bot_name = bot_name.clone();
                     async move {
-                        if let Room::Joined(room) = room {
-                            log::info!("processing event {:?} ..", event);
 
-                            let sender = event.sender.as_str();
-                            let original_event = reply_event_id(&(event.content.relates_to));
-                            let extracted_msg_body = extract_body(&event);
-                            if extracted_msg_body.msg_body.is_none() { return } // No body to process
+                        if room.state() != RoomState::Joined {
+                            return;
+                        }
 
-                            if current_time > event.origin_server_ts {
-                                // Event was before I joined, can happen in public rooms.
-                                return;
+                        log::info!("processing event {:?} ..", event);
+
+                        let sender = event.sender.as_str();
+                        let original_event = reply_event_id(event.content.relates_to.as_ref());
+
+                        let extracted_msg_body = extract_body(&event);
+                        if extracted_msg_body.msg_body.is_none() { return } // No body to process
+
+                        if current_time > event.origin_server_ts {
+                            // Event was before I joined, can happen in public rooms.
+                            return;
+                        }
+
+                        let plain_message_body = extracted_msg_body.msg_body.clone().unwrap();
+
+                        if plain_message_body.starts_with(bot_name.as_str()) {
+                            let result = send_reply_to_event_in_room(&room,
+                                                                     &event,
+                                                                     "Thanks for you message. I am but a simple bot. I will join any room you invite me to. Please run !help to see what I can do.").await;
+                            match result {
+                                Err(error) => {
+                                    log::warn!("Could not send reply message due to {:?}..", error);
+                                }
+                                _ => { /* ignore */}
                             }
+                            return
+                        }
 
-                            let plain_message_body = extracted_msg_body.msg_body.clone().unwrap();
+                        let command = extract_command(&room,
+                                                      sender,
+                                                      &event,
+                                                      original_event,
+                                                      &extracted_msg_body).await;
 
-                            if plain_message_body.starts_with(bot_name.as_str()) {
+
+                        match command {
+                            Err(error) => {
+                                log::warn!("Error occurred while extracting command {:?}..", error);
                                 let result = send_reply_to_event_in_room(&room,
-                                                                                           &event,
-                                                                                     "Thanks for you message. I am but a simple bot. I will join any room you invite me to. Please run !help to see what I can do.").await;
+                                                                         &event,
+                                                                         "I did not understand that command. Please use '!help' to list the commands. Please write usernames in plain text").await;
                                 match result {
                                     Err(error) => {
-                                        log::warn!("Could not send reply message due to {:?}..", error);
+                                        log::warn!("Could not even send error message due to {:?}..", error);
                                     }
                                     _ => { /* ignore */}
                                 }
                                 return
                             }
+                            _ => { },
+                        };
+                        let command = command.unwrap();
+                        if command.is_none() { return } // No Command to execute
 
-                            let command = extract_command(&room,
-                                                                                  sender,
-                                                                                  &event,
-                                                                                  original_event,
-                                                                                  &extracted_msg_body).await;
-
-
-                            match command {
-                                Err(error) => {
-                                    log::warn!("Error occurred while extracting command {:?}..", error);
-                                    let result = send_reply_to_event_in_room(&room,
-                                                                                               &event,
-                                                                                          "I did not understand that command, please use '!help' to list the commands and how to use them").await;
-                                    match result {
-                                        Err(error) => {
-                                            log::warn!("Could not even send error message due to {:?}..", error);
-                                        }
-                                        _ => { /* ignore */}
-                                    }
-                                    return
-                                }
-                                _ => { },
-                            };
-                            let command = command.unwrap();
-                            if command.is_none() { return } // No Command to execute
-
-                            let command_reply = business_logic_contex.processing_command(command).await;
-                            match command_reply {
-                                Err(error) => {
-                                    log::warn!("Error occurred during business processing {:?}..", error);
-                                    let result = send_reply_to_event_in_room(&room,
-                                                                             &event,
-                                                                             "I seem to be experiencing a problem please try again later").await;
-                                    match result {
-                                        Err(error) => {
-                                            log::warn!("Could not even send error message due to {:?}..", error);
-                                        }
-                                        _ => { /* ignore */}
-                                    }
-                                    return
-                                }
-                                _ => { },
-                            };
-                            let command_reply = command_reply.unwrap();
-
-                            log::info!("Sending back answer {:?}", command_reply);
-
-                            if command_reply.is_empty() {
-                                return // No output to give back
-                            }
-
-                            let send_result = send_reply_to_event_in_room(&room,
-                                                                              &event,
-                                                                         command_reply.text.unwrap().as_str()).await;
-                            match send_result {
-                                Err(error) => {
-                                    log::warn!("Error occurred while sending response {:?}..", error);
-                                    return
-                                }
-                                _ => { },
-                            };
-
-                            //
-                            // TODO(AE) This assumes we don't have image only responses fix once
-                            // this changes.
-                            //
-
-                            // Attaching image to message
-                            if command_reply.image.is_some() {
-                                // https://stackoverflow.com/questions/42240663/how-to-read-stdioread-from-a-vec-or-slice
-                                let mut image_to_upload = Cursor::new(command_reply.image.unwrap());
-                                let upload_result = room.send_attachment("image",
-                                                                             &mime::IMAGE_PNG,
-                                                                                 &mut image_to_upload,
-                                                                                 None).await;
-                                match upload_result {
+                        let command_reply = business_logic_contex.processing_command(command).await;
+                        match command_reply {
+                            Err(error) => {
+                                log::warn!("Error occurred during business processing {:?}..", error);
+                                let result = send_reply_to_event_in_room(&room,
+                                                                         &event,
+                                                                         "I seem to be experiencing a problem please try again later").await;
+                                match result {
                                     Err(error) => {
-                                        log::warn!("Error occurred while attaching image {:?}..", error);
-                                        return
+                                        log::warn!("Could not even send error message due to {:?}..", error);
                                     }
-                                    _ => { },
+                                    _ => { /* ignore */}
                                 }
+                                return
+                            }
+                            _ => { },
+                        };
+                        let command_reply = command_reply.unwrap();
+
+                        log::info!("Sending back answer {:?}", command_reply);
+
+                        if command_reply.is_empty() {
+                            return // No output to give back
+                        }
+
+                        let send_result = send_reply_to_event_in_room(&room,
+                                                                      &event,
+                                                                      command_reply.text.unwrap().as_str()).await;
+                        match send_result {
+                            Err(error) => {
+                                log::warn!("Error occurred while sending response {:?}..", error);
+                                return
+                            }
+                            _ => { },
+                        };
+
+                        //
+                        // TODO(AE) This assumes we don't have image only responses fix once
+                        // this changes.
+                        //
+
+                        // Attaching image to message
+                        if command_reply.image.is_some() {
+                            // https://stackoverflow.com/questions/42240663/how-to-read-stdioread-from-a-vec-or-slice
+
+
+                            let upload_result = room.send_attachment("image",
+                                                                     &mime::IMAGE_PNG,
+                                                                     command_reply.image.unwrap(),
+                                                                     AttachmentConfig::new()).await;
+                            match upload_result {
+                                Err(error) => {
+                                    log::warn!("Error occurred while attaching image {:?}..", error);
+                                    return
+                                }
+                                _ => { },
                             }
                         }
+
                     }
                 }
-            }).await;
+            });
         }
 
         fn bot_name(&self) -> String {
@@ -569,7 +571,24 @@ pub mod matrix_bot {
 
         pub async fn sync(&self) -> matrix_sdk::Result<()>  {
             log::info!("Starting sync ..");
-            Ok(self.client.sync(SyncSettings::default()).await)
+
+            let user_id = self.config.matrix_username.as_str();
+
+            log::info!("Loging client in ..");
+
+            self.client
+                .matrix_auth()
+                .login_username(user_id, self.config.matrix_password.as_str()).await?;
+
+            log::info!("Done with preliminary steps ..");
+
+            let response = self.client.sync_once(SyncSettings::default()).await.unwrap();
+
+            let settings = SyncSettings::default().token(response.next_batch);
+
+            self.client.sync(settings).await?;
+
+            Ok(())
         }
     }
 }

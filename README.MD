@@ -5,7 +5,7 @@ Matrix-Lightning-Tip-Bot (MLTB) is a lightning network BTC tip bot for the matri
 While we have tested this bot, it is in 'beta', don't put in more than you are willing to lose.
 
 # How to use
-MLTB can either be used directly or be self run. Running your own instance requires access to a LNbits (https://lnbits.com/) instance.
+MLTB can either be used directly or be self run. Running your own instance requires access to a LNbits (https://lnbits.com/) instance with the https://github.com/lnbits/usermanager plugin installed.
 
 ## Directly
 We are running a dedicated MLTB instance over at @matrix-lightning-tip-bot:matrix.org. Invite it to a room to get started immediately. After joining the bot should display the possible commands which are:
@@ -36,7 +36,7 @@ Running your own instance is done by:
 ### Build Docker image
 Building the Docker image is done with:
 1. Install Docker (https://www.docker.com/)
-2. Run `./gradlew build`  to build the docker image. On Windows this might need the `--project-cache-dir=../cache` option due to caching issues.
+2. Run `./gradlew buildDocker`  to build the docker image. On Windows this might need the `--project-cache-dir=../cache` option due to caching issues.
 
 ### Generate local sqlite Database file
 Generating the local Database file is done with:
@@ -50,7 +50,7 @@ Construct a file `config.conf` with the following entries:
 --matrix-server=@example_name:matrix.org # The registred username of your bot
 --matrix-password=SomeExamplePassowrd    # The password of your matrxi
 --lnbits-url=http://mylnbitsurl.com      # The url of your LNbits instance  
---lnbits-x-api-key=<LNBITS-X-API-KEY>    # The x-api-key for your LNbits instance. See i.e. https://golangrepo.com/repo/LightningTipBot-LightningTipBot for details on how to do that.  
+--lnbits-x-api-key=<LNBITS-X-API-KEY>    # The super user x-api-key for your LNbits instance. See https://github.com/lnbits/lnbits/wiki/LNbits-Extensions on how to obtain it.  
 --database-url=/db/db.db                 # The absolute path to your generated db.
 ```
 

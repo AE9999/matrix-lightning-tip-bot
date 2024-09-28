@@ -136,18 +136,6 @@ pub mod lnbits_client {
             }
         }
 
-        #[allow(dead_code)] // TODO(AE) Remove once program has progressed far enought
-        pub async fn get_user(&self, user_id: &str) -> Result<LNBitsUser, reqwest::Error> {
-            let response = reqwest::Client::new().post([self.url.as_str(), "/usermanager/api/v1/users/", user_id].join(""))
-                .header((self.header[0]).0.as_str(), (self.header[0]).1.as_str())
-                .header((self.header[1]).0.as_str(), (self.header[1]).1.as_str())
-                .header((self.header[2]).0.as_str(), (self.header[2]).1.as_str())
-                .send()
-                .await?
-                .json::<LNBitsUser>().await?;
-            Ok(response)
-        }
-
         pub async fn create_user_with_initial_wallet(&self,
                                                      create_user_args: &CreateUserArgs) -> Result<LNBitsUser, reqwest::Error> {
 
@@ -159,31 +147,6 @@ pub mod lnbits_client {
                 .send()
                 .await?
                 .json::<LNBitsUser>()
-                .await?;
-            Ok(response)
-        }
-
-        #[allow(dead_code)] // TODO(AE) Remove once program has progressed far enough
-        pub async fn create_wallet(&self, user_id: &str, wallet_named: &str, admin_id: &str) -> Result<Wallet, reqwest::Error> {
-            #[derive(Debug, Deserialize, Serialize)]
-            struct Argument {
-                user_id: String,
-                wallet_named: String,
-                admin_id: String
-            }
-
-            let response = reqwest::Client::new().post([self.url.as_str(), "/usermanager/api/v1/wallets", user_id].join(""))
-                .header((self.header[0]).0.as_str(), (self.header[0]).1.as_str())
-                .header((self.header[1]).0.as_str(), (self.header[1]).1.as_str())
-                .header((self.header[2]).0.as_str(), (self.header[2]).1.as_str())
-                .json(&Argument {
-                    user_id: String::from(user_id),
-                    wallet_named: String::from(wallet_named),
-                    admin_id: String::from(admin_id)
-                })
-                .send()
-                .await?
-                .json::<Wallet>()
                 .await?;
             Ok(response)
         }

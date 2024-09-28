@@ -11,13 +11,12 @@ pub struct MatrixId2LNBitsId {
 
 impl MatrixId2LNBitsId {
     pub fn get_lnbits_id(&self) -> LNBitsId {
-        LNBitsId::new(self.lnbits_id.as_str(),
-                      self.lnbits_admin.as_str())
+        LNBitsId::new(self.lnbits_id.as_str())
     }
 }
 
 #[derive(Insertable)]
-#[table_name = "matrix_id_2_lnbits_id"]
+#[diesel(table_name = matrix_id_2_lnbits_id)]
 pub struct NewMatrixId2LNBitsId<'a> {
     pub matrix_id: &'a str,
     pub lnbits_id: &'a str,
@@ -41,14 +40,12 @@ impl NewMatrixId2LNBitsId<'_> {
 
 pub struct LNBitsId {
     pub lnbits_id: String,
-    pub lnbits_admin: String,
 }
 
 impl LNBitsId {
-    pub fn new(lnbits_id: &str, lnbits_admin: &str) -> LNBitsId {
+    pub fn new(lnbits_id: &str) -> LNBitsId {
         LNBitsId {
-            lnbits_id: String::from(lnbits_id),
-            lnbits_admin: String::from(lnbits_admin)
+            lnbits_id: String::from(lnbits_id)
         }
     }
 }
