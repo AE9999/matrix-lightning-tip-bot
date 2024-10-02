@@ -8,7 +8,7 @@ While we have tested this bot, it is in 'beta', don't put in more than you are w
 MLTB can either be used directly or be self run. Running your own instance requires access to a LNbits (https://lnbits.com/) instance with the https://github.com/lnbits/usermanager plugin installed.
 
 ## Directly
-We are running a dedicated MLTB instance over at @matrix-lightning-tip-bot:matrix.org. Invite it to a room to get started immediately. After joining the bot should display the possible commands which are:
+We are running a dedicated MLTB instance over at @matrix-lightning-tip-bot:s-software-solutions.nl. Invite it to a room to get started immediately. After joining the bot should display the possible commands which are:
 
 ```
 !tip      - Reply to a message to tip it: !tip <amount> [<memo>]
