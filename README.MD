@@ -47,11 +47,12 @@ Generating the local Database file is done with:
 ### Construct a config file
 Construct a file `config.conf` with the following entries:
 ```
---matrix-server=@example_name:matrix.org # The registred username of your bot
---matrix-password=SomeExamplePassowrd    # The password of your matrxi
---lnbits-url=http://mylnbitsurl.com      # The url of your LNbits instance  
---lnbits-x-api-key=<LNBITS-X-API-KEY>    # The super user x-api-key for your LNbits instance. See https://github.com/lnbits/lnbits/wiki/LNbits-Extensions on how to obtain it.  
---database-url=/db/db.db                 # The absolute path to your generated db.
+--matrix-server=https://matrix.my-matrixserver.org # The registred username of your bot
+--matrix-username=bot_username                     # The username of your matrix bot
+--matrix-password=SomeExamplePassowrd              # The password of your matrix bot
+--lnbits-url=http://mylnbitsurl.com                # The url of your LNbits instance  
+--lnbits-x-api-key=<LNBITS-X-API-KEY>              # The super user x-api-key for your LNbits instance. See https://github.com/lnbits/lnbits/wiki/LNbits-Extensions on how to obtain it.  
+--database-url=/db/db.db                           # The absolute path to your generated db.
 ```
 
 ### Running
