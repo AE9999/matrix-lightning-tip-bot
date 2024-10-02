@@ -27,7 +27,7 @@ impl BusinessLogicContext {
         }
     }
 
-    pub fn get_help_content() -> String {
+    pub fn get_help_content(&self) -> String {
          format!("Matrix-Lightning-Tip-Bot {:?}  \n \
                  !tip      - Reply to a message to tip it: !tip <amount> [<memo>]\n\
                  !balance - Check your balance: !balance\n\
@@ -37,52 +37,55 @@ impl BusinessLogicContext {
                  !help    - Read this help.\n\
                  !donate  - Donate to the matrix-lighting-tip-bot project: !donate <amount>\n\
                  !party   - Start a Party: !party\n\
-                 !version - Print the version of this bot\n", env!("CARGO_PKG_VERSION"))
+                 !version - Print the version of this bot\n\
+                 If you wanna help consider donating, or sending some btc to :{:?}",
+                 env!("CARGO_PKG_VERSION"),
+                self.config.btc_donation_address)
     }
 
     pub async fn processing_command(&self,
                                 command: Command) -> Result<CommandReply, SimpleError> {
         let command_reply = match command {
-            Command::Tip { sender, event: _, amount, memo, replyee } => {
+            Command::Tip { sender, amount, memo, replyee } => {
                 try_with!(self.do_process_send(sender.as_str(),
                                                replyee.as_str(),
                                                amount,
                                                &memo).await,
                                                "Could not process tip.")
             },
-            Command::Send { sender, event: _, amount, recipient, memo } => {
+            Command::Send { sender, amount, recipient, memo } => {
                 try_with!(self.do_process_send(sender.as_str(),
                                                recipient.as_str(),
                                                amount,
                                                &memo).await,
                           "Could not process send.")
             },
-            Command::Invoice { sender, event: _, amount, memo } => {
+            Command::Invoice { sender, amount, memo } => {
                 try_with!(self.do_process_invoice(sender.as_str(),
                                                   amount,
                                                   &memo).await,
                           "Could not process invoice")
             },
-            Command::Balance { sender, event: _ } => {
+            Command::Balance { sender } => {
                 try_with!(self.do_process_balance(sender.as_str()).await,
                                                   "Could not process balance")
             },
-            Command::Pay { sender, event: _, invoice } => {
+            Command::Pay { sender, invoice } => {
                 try_with!(self.do_process_pay(sender.as_str(), invoice.as_str()).await,
                           "Could not process pay")
             },
-            Command::Help { sender: _, event: _ } => {
+            Command::Help { } => {
                 try_with!(self.do_process_help().await,
                           "Could not process help")
             },
-            Command::Donate { sender, event: _, amount } => {
+            Command::Donate { sender, amount } => {
                 try_with!(self.do_process_donate(sender.as_str(), amount).await,
                          "Could not process donate")
             }
-            Command::Party { sender: _, event: _  } => {
+            Command::Party {  } => {
                 try_with!(self.do_process_party().await, "Could not process party")
             },
-            Command::Version { sender: _, event: _  } => {
+            Command::Version { } => {
                 try_with!(self.do_process_version().await, "Could not process party")
             },
             _ => {
@@ -175,7 +178,7 @@ impl BusinessLogicContext {
 
     async fn do_process_help(&self) -> Result<CommandReply, SimpleError> {
         log::info!("processing help command ..");
-        Ok(CommandReply::text_only(BusinessLogicContext::get_help_content().as_str()))
+        Ok(CommandReply::text_only(self.get_help_content().as_str()))
     }
 
     async fn do_process_party(&self) -> Result<CommandReply, SimpleError> {
@@ -188,10 +191,15 @@ impl BusinessLogicContext {
     }
 
     async fn do_process_donate(&self, sender: &str,  amount: u64) -> Result<CommandReply, SimpleError> {
-        let result = self.do_process_send(sender,
-                                                              self.config.donate_user.as_str(),
-                                                                      amount,
-                                                                &Some(format!("a generouse donation from {:?}", sender))).await;
+        if self.config.donate_user.is_none() {
+            return Ok(CommandReply::text_only("Thanks but this agent does not accept donations"))
+        }
+
+        let result =
+            self.do_process_send(sender,
+                                 self.config.donate_user.as_ref().unwrap().as_str(),
+                                 amount,
+                                 &Some(format!("a generouse donation from {:?}", sender))).await;
         match result {
             Ok(_) => Ok(CommandReply::text_only("Thanks for the donation")),
             Err(error) => Err(error)
@@ -202,9 +210,9 @@ impl BusinessLogicContext {
     async fn matrix_id2lnbits_id(&self, matrix_id: &str) -> Result<LNBitsId, SimpleError> {
         if !(self.data_layer.lnbits_id_exists_for_matrix_id(matrix_id)) {
 
-            let wallet_name = matrix_id.clone().to_owned() + "wallet";
+            let wallet_name = matrix_id.to_owned() + "wallet";
             let admin_id = Uuid::new_v4().to_string();
-            let user_name = matrix_id.clone();
+            let user_name = matrix_id;
             let email = "";
             let password = "";
 
@@ -253,8 +261,9 @@ impl BusinessLogicContext {
     async fn pay_bolt11_invoice_as_matrix_is(&self,
                                              matrix_id: &str,
                                              bolt11_invoice: &str) -> Result<(), SimpleError> {
-        let parsed_invoice: lightning_invoice::Invoice = try_with!(str::parse::<lightning_invoice::Invoice>(bolt11_invoice),
-                                                            "could not parse invoice");
+
+        let parsed_invoice: lightning_invoice::Bolt11Invoice =
+            str::parse::<lightning_invoice::Bolt11Invoice>(bolt11_invoice).unwrap();
 
         if parsed_invoice.amount_milli_satoshis().is_none() {
             bail!( "Incorrect invoice")
