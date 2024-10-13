@@ -164,7 +164,7 @@ impl BusinessLogicContext {
         let balance = if balance.is_none()  { 0 }
                       else { balance.unwrap() / 1000  }; // Minisatashis are a bitch.
 
-        Ok(CommandReply::text_only(format!("Your balance is {:?}", balance).as_str()))
+        Ok(CommandReply::text_only(format!("Your balance is {} Sats", balance).as_str()))
     }
 
     async fn do_process_pay(&self, sender: &str, bol11_invoice: &str) -> Result<CommandReply, SimpleError> {
