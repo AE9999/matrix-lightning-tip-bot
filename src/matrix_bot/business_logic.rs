@@ -111,21 +111,20 @@ impl BusinessLogicContext {
                   "Could not pay invoice");
 
         if memo.is_some() {
-            Ok(CommandReply::text_only(format!("{:?} send {:?} to {:?} with memo {:?}",
-                                                    sender,
-                                                    amount,
-                                                    recipient,
-                                                    memo.clone().unwrap()).as_str()))
+            Ok(CommandReply::text_only(format!("{:?} send {:?} Sats to {:?} with memo {:?}",
+                                        sender,
+                                        amount,
+                                        recipient,
+                                        memo.clone().unwrap()).as_str()))
         }
         else {
-            Ok(CommandReply::text_only(format!("{:?} send {:?} to {:?}",
-                                               sender,
-                                               amount,
-                                               recipient).as_str()))
+            Ok(CommandReply::text_only(format!("{:?} send {:?} Sats to {:?}",
+                                       sender,
+                                       amount,
+                                       recipient).as_str()))
         }
 
     }
-
 
     async fn do_process_invoice(&self,
                                 sender: &str,
