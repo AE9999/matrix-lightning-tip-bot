@@ -20,7 +20,7 @@ pub mod matrix_bot {
     use simple_error::{bail, try_with};
     use simple_error::SimpleError;
     use url::Url;
-    use crate::matrix_bot::commands::{balance, Command, donate, help, invoice, party, pay, send, tip, version};
+    use crate::matrix_bot::commands::{balance, Command, donate, help, invoice, party, pay, send, tip, version, fiat_to_sats, sats_to_fiat};
     pub use crate::data_layer::data_layer::LNBitsId;
 
 
@@ -171,6 +171,10 @@ pub mod matrix_bot {
             party()
         } else if msg_body.starts_with("!version") {
             version()
+        } else if msg_body.starts_with("!fiat-to-sats") {
+            fiat_to_sats(sender, msg_body.as_str())
+        } else if msg_body.starts_with("!sats-to-fiat") {
+            sats_to_fiat(sender, msg_body.as_str())
         } else {
             Ok(Command::None)
         }

@@ -38,6 +38,8 @@ impl BusinessLogicContext {
                  !donate  - Donate to the matrix-lighting-tip-bot project: !donate <amount>\n\
                  !party   - Start a Party: !party\n\
                  !version - Print the version of this bot\n\
+                 !fiat-to-sats - Convert fiat to satoshis: !fiat-to-sats <amount> <currency (USD, EUR, CHF)>\n\
+                 !sats-to-fiat - Convert satoshis to fiat: !sats-to-fiat <amount> <currency (USD, EUR, CHF)>\n\
                  If you wanna help consider donating, or sending some btc to :{:?}",
                  env!("CARGO_PKG_VERSION"),
                 self.config.btc_donation_address)
@@ -88,12 +90,83 @@ impl BusinessLogicContext {
             Command::Version { } => {
                 try_with!(self.do_process_version().await, "Could not process party")
             },
+            Command::FiatToSats { sender, amount, currency } => {
+                try_with!(self.do_process_fiat_conversion(sender.as_str(), amount, currency.as_str(), true).await,
+                      "Could not process FiatToSats")
+            },
+            Command::SatsToFiat { sender, amount, currency } => {
+                try_with!(self.do_process_fiat_conversion(sender.as_str(), amount as f64, currency.as_str(), false).await,
+                      "Could not process SatsToFiat")
+            },
             _ => {
                 log::error!("Encountered unsuported command {:?} ..", command);
                 bail!("Could not process: {:?}", command)
             }
         };
         Ok(command_reply)
+    }
+
+    async fn get_fiat_to_btc_rate(&self, currency: &str) -> Result<f64, SimpleError> {
+    let url = format!("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies={}", currency.to_lowercase());
+    log::info!("Sending request to CoinGecko for currency: {}", currency);
+
+    let response = reqwest::get(&url).await;
+    if let Err(err) = &response {
+        log::error!("Error while sending request to CoinGecko: {}", err);
+        return Err(SimpleError::new(err.to_string()));
+    }
+
+    let json = response.unwrap().json::<serde_json::Value>().await;
+    if let Err(err) = &json {
+        log::error!("Error while parsing response JSON: {}", err);
+        return Err(SimpleError::new(err.to_string()));
+    }
+
+    let rate = json.unwrap()["bitcoin"][currency.to_lowercase()].as_f64().unwrap_or(0.0);
+    if rate == 0.0 {
+        log::error!("Received invalid rate from CoinGecko for currency: {}", currency);
+        return Err(SimpleError::new("Invalid conversion rate"));
+    }
+
+    log::info!("Received conversion rate: {} for currency: {}", rate, currency);
+    Ok(rate)
+    }
+
+    // Fiat in Sats umrechnen
+    async fn convert_fiat_to_sats(&self, amount: f64, currency: &str) -> Result<u64, SimpleError> {
+        let rate = self.get_fiat_to_btc_rate(currency).await.map_err(|e| SimpleError::new(e.to_string()))?;
+        let sats = (amount / rate * 100_000_000.0) as u64;
+        Ok(sats)
+    }
+
+    // Sats in Fiat umrechnen
+    async fn convert_sats_to_fiat(&self, amount: u64, currency: &str) -> Result<f64, SimpleError> {
+        let rate = self.get_fiat_to_btc_rate(currency).await.map_err(|e| SimpleError::new(e.to_string()))?;
+        let fiat = (amount as f64 / 100_000_000.0) * rate;
+        Ok(fiat)
+    }
+
+    // Die Logik für das Verarbeiten der Fiat-Befehle
+    pub async fn do_process_fiat_conversion(&self, _sender: &str, amount: f64, currency: &str, is_fiat_to_sats: bool) -> Result<CommandReply, SimpleError> {
+        let result = if is_fiat_to_sats {
+            self.convert_fiat_to_sats(amount, currency).await.map(|sats| sats as f64)
+        } else {
+            self.convert_sats_to_fiat(amount as u64, currency).await
+        };
+
+        match result {
+            Ok(converted) => {
+                let are_or_is = if amount == 1.0 { "is" } else { "are" };
+                let message = if is_fiat_to_sats {
+                    format!("{:.2} {} {} approximately {} Sats.", amount, currency.to_uppercase(), are_or_is, converted)
+                } else {
+                    format!("{} Sats {} approximately {:.2} {}.", amount as u64, are_or_is, converted, currency.to_uppercase())
+                };
+
+                Ok(CommandReply::text_only(&message))
+            }
+            Err(err) => Err(err),
+        }
     }
 
     async fn do_process_send(&self,
