@@ -22,6 +22,8 @@ I am are running a dedicated MLTB instance over at @lightning-wallet-bot:matrix.
 !donate  - Donate to the matrix-lighting-tip-bot project: !donate <amount>
 !party   - Start a Party: !party
 !version - Print the version of this bot
+!fiat-to-sats - Convert fiat to satoshis: !fiat-to-sats <amount> <currency (USD, EUR, CHF)>
+!sats-to-fiat - Convert satoshis to fiat: !sats-to-fiat <amount> <currency (USD, EUR, CHF)>
 ```
 
 My MLTB instance runs on this LightningNode https://amboss.space/node/034efe9ae4eecacc0a2d7cdff59852665398968cfea347185479cc049ccac5e8ec
@@ -95,4 +97,5 @@ A big thanks the people over at LightningTipBot and @AE9999. This fork-project i
 - limit usage to specific matrix instances
 - Inform users about donated funds.
 - Graceliously handle multiple bots is a single
-- integrate a fiat/rate conversion tool
+- integrate a fiat/rate conversion tool (✅)
+- send sats directly to a lightning adress
