@@ -37,9 +37,9 @@ impl BusinessLogicContext {
                  !help    - Read this help.\n\
                  !donate  - Donate to the matrix-lighting-tip-bot project: !donate <amount>\n\
                  !party   - Start a Party: !party\n\
-                 !version - Print the version of this bot\n\
                  !fiat-to-sats - Convert fiat to satoshis: !fiat-to-sats <amount> <currency (USD, EUR, CHF)>\n\
                  !sats-to-fiat - Convert satoshis to fiat: !sats-to-fiat <amount> <currency (USD, EUR, CHF)>\n\
+                 !version - Print the version of this bot\n\
                  If you wanna help consider donating, or sending some btc to :{:?}",
                  env!("CARGO_PKG_VERSION"),
                 self.config.btc_donation_address)
