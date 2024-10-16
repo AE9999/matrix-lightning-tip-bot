@@ -11,6 +11,8 @@ pub enum Command  {
     Donate  { sender: String, amount: u64 },
     Party   { },
     Version { },
+    FiatToSats { sender: String, amount: f64, currency: String },
+    SatsToFiat { sender: String, amount: u64, currency: String },
     None,
 }
 
@@ -109,6 +111,26 @@ pub fn party() -> Result<Command, SimpleError> {
 
 pub fn version() -> Result<Command, SimpleError> {
     Ok(Command::Version { })
+}
+
+pub fn fiat_to_sats(sender: &str, text: &str) -> Result<Command, SimpleError> {
+    let split = text.split_whitespace().collect::<Vec<&str>>();
+    if split.len() < 3 {
+        bail!("Expected at least 3 arguments: !fiat-to-sats <amount> <currency>");
+    }
+    let amount = try_with!(split[1].parse::<f64>(), "Could not parse amount");
+    let currency = split[2].to_string();
+    Ok(Command::FiatToSats { sender: sender.to_string(), amount, currency })
+}
+
+pub fn sats_to_fiat(sender: &str, text: &str) -> Result<Command, SimpleError> {
+    let split = text.split_whitespace().collect::<Vec<&str>>();
+    if split.len() < 3 {
+        bail!("Expected at least 3 arguments: !sats-to-fiat <amount> <currency>");
+    }
+    let amount = try_with!(split[1].parse::<u64>(), "Could not parse amount");
+    let currency = split[2].to_string();
+    Ok(Command::SatsToFiat { sender: sender.to_string(), amount, currency })
 }
 
 impl CommandReply {
