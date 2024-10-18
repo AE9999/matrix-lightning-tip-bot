@@ -1,4 +1,5 @@
 use chrono::Utc;
+use lnurl::LnUrlResponse;
 use simple_error::{bail, SimpleError, try_with};
 use uuid::Uuid;
 use qrcode_generator::QrCodeEcc;
@@ -7,6 +8,7 @@ use crate::data_layer::data_layer::NewMatrixId2LNBitsId;
 use crate::lnbits_client::lnbits_client::{CreateUserArgs, InvoiceParams, LNBitsUser, PaymentParams, Wallet, WalletInfo};
 use crate::matrix_bot::commands::{Command, CommandReply};
 use crate::matrix_bot::matrix_bot::LNBitsId;
+use crate::matrix_bot::utils::parse_lnurl;
 
 #[derive(Clone)]
 pub struct BusinessLogicContext  {
@@ -31,7 +33,7 @@ impl BusinessLogicContext {
          format!("Matrix-Lightning-Tip-Bot {:?}  \n \
                  !tip      - Reply to a message to tip it: !tip <amount> [<memo>]\n\
                  !balance - Check your balance: !balance\n\
-                 !send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com> [<memo>]\n\
+                 !send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com>, or a lightning adress <lightning@adress.com> [<memo>]\n\
                  !invoice - Receive over Lightning: !invoice <amount> [<memo>]\n\
                  !pay     - Pay  over Lightning: !pay <invoice>\n\
                  !help    - Read this help.\n\
@@ -176,27 +178,52 @@ impl BusinessLogicContext {
                              memo: &Option<String>) -> Result<CommandReply, SimpleError>  {
         log::info!("processing send command ..");
 
+    	// If it's an LNURL, pay to the external wallet, else handle it internally
+        match parse_lnurl(recipient) {
+            Some(lnurl) => {
+                let client = lnurl::Builder::default()
+                    .build_blocking().map_err(|e| SimpleError::from(e))?;
 
-        let bolt11_invoice: String = try_with!(self.generate_bolt11_invoice_for_matrix_id(recipient, amount, memo).await,
-                                        "Could not generate invoice");
+                let res = client.make_request(&lnurl.url).map_err(|e| SimpleError::from(e))?;
 
-        try_with!(self.pay_bolt11_invoice_as_matrix_is(sender, bolt11_invoice.as_str()).await,
-                  "Could not pay invoice");
+                match res {
+                    LnUrlResponse::LnUrlPayResponse(pay) => {
+                        // Convert sats to msats
+                        let res = client.get_invoice(&pay, amount * 1_000, None, match memo {
+                            Some(memo) => Some(memo.as_str()),
+                            None => None,
+                        }).map_err(|e| SimpleError::from(e))?;
 
+                        try_with!(self.pay_bolt11_invoice_as_matrix_is(sender, res.invoice()).await,
+                            "Could not pay invoice");
+                    }
+                    _ => {
+                        return Err(SimpleError::new("Invalid LNURL"));
+                    }
+                }
+            },
+            None => {
+                let bolt11_invoice: String = try_with!(self.generate_bolt11_invoice_for_matrix_id(recipient, amount, memo).await,
+                                         "Could not generate invoice");
+ 
+                try_with!(self.pay_bolt11_invoice_as_matrix_is(sender, bolt11_invoice.as_str()).await,
+                   "Could not pay invoice");
+            }
+        }
+ 
         if memo.is_some() {
             Ok(CommandReply::text_only(format!("{:?} sent {:?} Sats to {:?} with memo {:?}",
-                                        sender,
-                                        amount,
-                                        recipient,
-                                        memo.clone().unwrap()).as_str()))
+                                              sender,
+                                              amount,
+                                              recipient,
+                                              memo.clone().unwrap()).as_str()))
         }
         else {
             Ok(CommandReply::text_only(format!("{:?} sent {:?} Sats to {:?}",
-                                       sender,
-                                       amount,
-                                       recipient).as_str()))
+                                              sender,
+                                              amount,
+                                              recipient).as_str()))
         }
-
     }
 
     async fn do_process_invoice(&self,

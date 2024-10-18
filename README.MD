@@ -98,4 +98,4 @@ A big thanks the people over at LightningTipBot and @AE9999. This fork-project i
 - Inform users about donated funds.
 - Graceliously handle multiple bots is a single
 - integrate a fiat/rate conversion tool (✅)
-- send sats directly to a lightning adress
+- send sats directly to a lightning adress (✅)
