@@ -1,5 +1,6 @@
 mod commands;
 mod business_logic;
+mod utils;
 
 pub mod matrix_bot {
 
@@ -22,7 +23,7 @@ pub mod matrix_bot {
     use url::Url;
     use crate::matrix_bot::commands::{balance, Command, donate, help, invoice, party, pay, send, tip, version, fiat_to_sats, sats_to_fiat};
     pub use crate::data_layer::data_layer::LNBitsId;
-
+    use crate::matrix_bot::utils::parse_lnurl;
 
 
     #[derive(Debug)]
@@ -254,6 +255,10 @@ pub mod matrix_bot {
 
         if split_message.len() < 3 {
             bail!("Not a valid send message")
+        }
+
+	if parse_lnurl(split_message[2]).is_some() {
+            return Ok(raw_message)
         }
 
         let mut target_id: Option<OwnedUserId> = try_to_parse_into_full_username(split_message[2]);

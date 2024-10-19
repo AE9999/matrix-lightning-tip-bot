@@ -27,5 +27,4 @@ qrcode-generator = "4.1.9"
 mime = "0.3.17"
 lightning-invoice = "0.32.0"
 tl = "0.4.4"
-
-
+lnurl-rs = "0.8.0"

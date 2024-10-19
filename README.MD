@@ -1,7 +1,7 @@
  # About
 Matrix-Lightning-Tip-Bot (MLTB) is a lightning network BTC tip bot for the matrix network. It is inspired by the LightningTipBot Telegram project at https://github.com/LightningTipBot/LightningTipBot.
 
-@AE9999 forked this project so he is the main actor here and all appreciations belong to him
+@AE9999 has started this project so he is the main actor here and all appreciations belong to him. Just updating and adding new functions here.
 
 # Warning
 While I have tested this bot, it is in 'beta', don't put in more than you are willing to lose.
@@ -15,15 +15,15 @@ I am are running a dedicated MLTB instance over at @lightning-wallet-bot:matrix.
 ```
 !tip     - Reply to a message to tip it: !tip <amount> [<memo>]
 !balance - Check your balance: !balance
-!send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com> [<memo>]
+!send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com> or <lightningadress@yourdomain.com> [<memo>]
 !invoice - Receive over Lightning: !invoice <amount> [<memo>]
 !pay     - Pay  over Lightning: !pay <invoice>
 !help    - Read this help.\n\
 !donate  - Donate to the matrix-lighting-tip-bot project: !donate <amount>
 !party   - Start a Party: !party
-!version - Print the version of this bot
 !fiat-to-sats - Convert fiat to satoshis: !fiat-to-sats <amount> <currency (USD, EUR, CHF)>
 !sats-to-fiat - Convert satoshis to fiat: !sats-to-fiat <amount> <currency (USD, EUR, CHF)>
+!version - Print the version of this bot
 ```
 
 My MLTB instance runs on this LightningNode https://amboss.space/node/034efe9ae4eecacc0a2d7cdff59852665398968cfea347185479cc049ccac5e8ec
@@ -89,6 +89,8 @@ The developer has public matrix room at `#matrix-lightning-tip-bot-discussion:s-
 # BTC Donations
 Non lightning BTC donations are welcome at `bc1q72dzh04fwxx780w05twtmn5fxzegpawdn5zg3g`
 
+Contributors lightning adress (me) = node-runner@btcpay.yourdevice.ch
+
 # Thanks
 A big thanks the people over at LightningTipBot and @AE9999. This fork-project is in no way ment to replace or critique the great work they have been doing, merely to give more people access to the lightning network.
 
@@ -98,4 +100,4 @@ A big thanks the people over at LightningTipBot and @AE9999. This fork-project i
 - Inform users about donated funds.
 - Graceliously handle multiple bots is a single
 - integrate a fiat/rate conversion tool (✅)
-- send sats directly to a lightning adress
+- send sats directly to a lightning adress (✅)
