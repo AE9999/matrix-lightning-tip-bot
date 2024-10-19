@@ -33,7 +33,7 @@ impl BusinessLogicContext {
          format!("Matrix-Lightning-Tip-Bot {:?}  \n \
                  !tip      - Reply to a message to tip it: !tip <amount> [<memo>]\n\
                  !balance - Check your balance: !balance\n\
-                 !send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com>, or a lightning adress <lightning@adress.com> [<memo>]\n\
+                 !send    - Send funds to a user: !send <amount> <@user> or <@user:domain.com>, or a lightning address <lightning@address.com> [<memo>]\n\
                  !invoice - Receive over Lightning: !invoice <amount> [<memo>]\n\
                  !pay     - Pay  over Lightning: !pay <invoice>\n\
                  !help    - Read this help.\n\
