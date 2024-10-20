@@ -1,8 +1,6 @@
  # About
 Matrix-Lightning-Tip-Bot (MLTB) is a lightning network BTC tip bot for the matrix network. It is inspired by the LightningTipBot Telegram project at https://github.com/LightningTipBot/LightningTipBot.
 
-@AE9999 has started this project so he is the main actor here and all appreciations belong to him. Just updating and adding new functions here.
-
 # Warning
 While I have tested this bot, it is in 'beta', don't put in more than you are willing to lose.
 
@@ -10,7 +8,7 @@ While I have tested this bot, it is in 'beta', don't put in more than you are wi
 MLTB can either be used directly or be self run. Running your own instance requires access to a LNbits (https://lnbits.com/) instance with the https://github.com/lnbits/usermanager plugin installed.
 
 ## Directly
-I am are running a dedicated MLTB instance over at @lightning-wallet-bot:matrix.yourdevice.ch. Invite it to a room to get started immediately. After joining the bot should display the possible commands which are:
+I am are running a dedicated MLTB instance over at '@matrix-lightning-tip-bot:s-software-solutions.nl'. Invite it to a room to get started immediately. After joining the bot should display the possible commands which are:
 
 ```
 !tip     - Reply to a message to tip it: !tip <amount> [<memo>]
@@ -87,12 +85,11 @@ See https://docs.docker.com/compose/environment-variables/ for more information.
 # Contact
 The developer has public matrix room at `#matrix-lightning-tip-bot-discussion:s-software-solutions.nl`
 # BTC Donations
-Non lightning BTC donations are welcome at `bc1q72dzh04fwxx780w05twtmn5fxzegpawdn5zg3g`
+Non lightning BTC donations are welcome at `bc1qz0a39akum52h4p2d2utgz2u726l24xpe945mvx`
 
-Contributors lightning adress (me) = node-runner@btcpay.yourdevice.ch
 
 # Thanks
-A big thanks the people over at LightningTipBot and @AE9999. This fork-project is in no way ment to replace or critique the great work they have been doing, merely to give more people access to the lightning network.
+A big thanks the people over at LightningTipBot. This fork-project is in no way ment to replace or critique the great work they have been doing, merely to give more people access to the lightning network.
 
 # Scheduled TODOs
 - make this use with a bot registered on your homeserver instead of a user-account
