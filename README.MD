@@ -92,6 +92,7 @@ Non lightning BTC donations are welcome at `bc1qz0a39akum52h4p2d2utgz2u726l24xpe
 A big thanks the people over at LightningTipBot. This fork-project is in no way ment to replace or critique the great work they have been doing, merely to give more people access to the lightning network.
 
 # Scheduled TODOs
+- single syncing errors shouldn't kill the bot.
 - make this use with a bot registered on your homeserver instead of a user-account
 - limit usage to specific matrix instances
 - Inform users about donated funds.
