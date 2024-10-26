@@ -7,6 +7,7 @@ mod lnbits_client;
 mod config;
 mod matrix_bot;
 mod data_layer;
+mod application_service;
 
 use log::LevelFilter;
 use crate::config::config::{config_from_cmd, Config};
