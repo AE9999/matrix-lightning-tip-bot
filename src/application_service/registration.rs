@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use rand::{distributions::Alphanumeric, Rng};
-
+use std::{fs, io};
+use std::path::Path;
+use serde_yaml;
+use regex::Regex;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Registration {
@@ -95,4 +98,17 @@ impl Registration {
             msc3202: None,
         }
     }
+
+    pub fn save(&self, path: &Path) -> io::Result<()> {
+        let data = serde_yaml::to_string(self)
+            .map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+        fs::write(path, data)?;
+        Ok(())
+    }
+
+    // Get the YAML representation as a String
+    pub fn to_yaml(&self) -> Result<String, serde_yaml::Error> {
+        serde_yaml::to_string(self)
+    }
+
 }

@@ -2,6 +2,7 @@ use warp::{Reply, Rejection};
 use std::sync::{Arc, Mutex};
 use warp::http::{HeaderMap, StatusCode};
 use warp::reject::Reject;
+use warp::reply;
 use crate::application_service::application_service::ApplicationServiceState;
 
 pub async fn put_transaction(
@@ -34,27 +35,40 @@ pub async fn get_user(
 }
 
 pub async fn post_ping(
+    headers: HeaderMap,
     state: Arc<Mutex<ApplicationServiceState>>,
 ) -> Result<impl Reply, Rejection> {
-    let mut state = state.lock().unwrap();
-    state.live = !state.live; // Toggle live state as an example
-    Ok(warp::reply::json(&"Ping received"))
+    // Check the server token
+    check_server_token(headers, state.clone()).await?;
+
+    // Respond with a blank JSON object and OK status
+    Ok(reply::with_status(reply::json(&serde_json::json!({})), StatusCode::OK))
 }
 
 pub async fn get_live(
     state: Arc<Mutex<ApplicationServiceState>>,
 ) -> Result<impl Reply, Rejection> {
     let state = state.lock().unwrap();
-    let live_status = if state.live { "Service is live" } else { "Service is not live" };
-    Ok(warp::reply::json(&"live_status"))
+    let status = if state.live {
+        StatusCode::OK
+    } else {
+        StatusCode::INTERNAL_SERVER_ERROR
+    };
+
+    Ok(reply::with_status(reply::json(&serde_json::json!({})), status))
 }
 
 pub async fn get_ready(
     state: Arc<Mutex<ApplicationServiceState>>,
 ) -> Result<impl Reply, Rejection> {
     let state = state.lock().unwrap();
-    let ready_status = if state.ready { "Service is ready" } else { "Service is not ready" };
-    Ok(warp::reply::json(&"ready_status"))
+    let status = if state.ready {
+        StatusCode::OK
+    } else {
+        StatusCode::INTERNAL_SERVER_ERROR
+    };
+
+    Ok(reply::with_status(reply::json(&serde_json::json!({})), status))
 }
 
 pub async fn check_server_token(

@@ -3,15 +3,13 @@ use tokio::sync::mpsc;
 use warp::Filter;
 use reqwest::cookie::Jar;
 use reqwest::{Client, ClientBuilder};
-use warp::http::Method;
-use warp::Rejection; // Import Rejection for error handling
 use std::sync::Mutex;
-use matrix_sdk::ruma;
-use warp::reply;
+use matrix_sdk::{ruma, StateStore};
 use ruma::api::client::sync::sync_events::DeviceLists;
 use serde::{Deserialize, Serialize};
 use crate::application_service::http_methods::{get_live, get_ready, get_room, get_user, post_ping, put_transaction};
 use crate::application_service::registration::Registration;
+use crate::application_service::txnid::TransactionIDCache;
 
 type Event = String;
 
@@ -22,6 +20,7 @@ pub struct ApplicationServiceState {
     pub http_client: Client,
     pub event_channel: mpsc::Sender<Event>,
     pub to_device_events: mpsc::Sender<Event>,
+    pub txn_idc_cache: TransactionIDCache,
     // otk_counts: mpsc::Sender<OTKCount>, not supported
     pub device_lists: mpsc::Sender<DeviceLists>,
     pub user_agent: String,
@@ -53,6 +52,7 @@ impl ApplicationServiceState {
             http_client,
             event_channel: event_tx,
             to_device_events: to_device_tx,
+            txn_idc_cache: TransactionIDCache::new(128),
             //otk_counts: otk_counts_tx,
             device_lists: device_lists_tx,
             user_agent: "mautrix".to_string(),
@@ -88,6 +88,8 @@ fn build_router(state: Arc<Mutex<ApplicationServiceState>>) -> impl Filter<Extra
                             .and_then(get_user))
                         .or(warp::path("ping")
                             .and(warp::post())
+                            .and(warp::header::headers_cloned()) // Adds headers as an argument
+
                             .and(state_filter.clone())
                             .and_then(post_ping)),
                 ),
