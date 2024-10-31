@@ -2,8 +2,10 @@ use warp::{Reply, Rejection};
 use std::sync::{Arc, Mutex};
 use warp::http::{HeaderMap, StatusCode};
 use warp::reject::Reject;
-use warp::reply;
 use crate::application_service::application_service::ApplicationServiceState;
+use warp::reply;
+use ruma::api::appservice::ping::send_ping::v1::{Request as PingRequest, Response as PingResponse};
+use ruma::api::{IncomingRequest, OutgoingResponse};
 
 pub async fn put_transaction(
     txn_id: String,
@@ -34,15 +36,41 @@ pub async fn get_user(
     Ok(warp::reply::json(&format!("User ID requested: {}", user_id)))
 }
 
+
 pub async fn post_ping(
     headers: HeaderMap,
+    ping_request: PingRequest,                      // Request body as Bytes
     state: Arc<Mutex<ApplicationServiceState>>,
 ) -> Result<impl Reply, Rejection> {
-    // Check the server token
-    check_server_token(headers, state.clone()).await?;
+    // Check the server token using the extracted headers
+    // check_server_token(headers.clone(), state.clone()).await?;
 
-    // Respond with a blank JSON object and OK status
-    Ok(reply::with_status(reply::json(&serde_json::json!({})), StatusCode::OK))
+    // Construct the `http::Request` for `PingRequest`
+    // let http_request = Request::builder()
+    //     .method("POST")
+    //     .header("Content-Type", "application/json")
+    //     .body(body).unwrap();
+    //
+    //
+    // // Convert the `http::Request` into a `PingRequest`
+    // let _ping_request =
+    //     PingRequest::try_from_http_request(http_request, &[]);
+
+
+    // Create a PingResponse and convert it to an HTTP response
+    let ping_response = PingResponse::new();
+    // let http_response: Response<Vec<u8>> = ping_response
+    //     .try_into_http_response()
+    //     .unwrap();
+
+    // let mut warp_response = Response::new(http_response.body().clone().into());
+    //
+    // *warp_response.status_mut() = http_response.status();
+    // for (header_name, header_value) in http_response.headers() {
+    //     warp_response.headers_mut().insert(header_name, header_value.clone());
+    // }
+
+    Ok(warp::reply::json(&ping_response))
 }
 
 pub async fn get_live(
@@ -105,16 +133,38 @@ struct AuthError {
     status: StatusCode,
 }
 
+#[derive(Debug)]
+struct InternalServerError {
+    message: &'static str,
+    status: StatusCode,
+}
+
 impl Reject for AuthError {}
+
+impl Reject for InternalServerError {}
 
 impl AuthError {
     fn response(self) -> warp::reply::WithStatus<warp::reply::Json> {
-        warp::reply::with_status(
-            warp::reply::json(&serde_json::json!({
-                "error_code": "ERR_UNKNOWN_TOKEN",
-                "message": self.message,
-            })),
-            self.status,
-        )
+        // warp::reply::with_status(
+        //     warp::reply::json(&serde_json::json!({
+        //         "error_code": "ERR_UNKNOWN_TOKEN",
+        //         "message": self.message,
+        //     })),
+        //     self.status,
+        // )
+        todo!()
+    }
+}
+
+impl InternalServerError {
+    fn response(self) -> warp::reply::WithStatus<warp::reply::Json> {
+        // warp::reply::with_status(
+        //     warp::reply::json(&serde_json::json!({
+        //         "error_code": "ERR_UNKNOWN_TOKEN",
+        //         "message": self.message,
+        //     })),
+        //     self.status,
+        // )
+        todo!()
     }
 }

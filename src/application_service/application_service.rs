@@ -89,9 +89,9 @@ fn build_router(state: Arc<Mutex<ApplicationServiceState>>) -> impl Filter<Extra
                         .or(warp::path("ping")
                             .and(warp::post())
                             .and(warp::header::headers_cloned()) // Adds headers as an argument
-
+                            .and(warp::body::json())         // Pass entire request as `Bytes`
                             .and(state_filter.clone())
-                            .and_then(post_ping)),
+                            .and_then(post_ping))
                 ),
         )
         .or(warp::path("_matrix")
