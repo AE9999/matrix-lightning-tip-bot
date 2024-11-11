@@ -5,7 +5,6 @@ use warp::reject::Reject;
 use crate::application_service::application_service::ApplicationServiceState;
 use warp::reply;
 use ruma::api::appservice::ping::send_ping::v1::{Request as PingRequest, Response as PingResponse};
-use ruma::api::{IncomingRequest, OutgoingResponse};
 
 pub async fn put_transaction(
     txn_id: String,
@@ -70,7 +69,8 @@ pub async fn post_ping(
     //     warp_response.headers_mut().insert(header_name, header_value.clone());
     // }
 
-    Ok(warp::reply::json(&ping_response))
+    //Ok(warp::reply::json(&ping_response))
+    Ok(warp::reply::json(&format!("Ping response")))
 }
 
 pub async fn get_live(

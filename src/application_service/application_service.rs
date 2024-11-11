@@ -7,7 +7,6 @@ use std::sync::Mutex;
 use matrix_sdk::{ruma, StateStore};
 use ruma::api::client::sync::sync_events::DeviceLists;
 use serde::{Deserialize, Serialize};
-use crate::application_service::http_methods::{get_live, get_ready, get_room, get_user, post_ping, put_transaction};
 use crate::application_service::registration::Registration;
 use crate::application_service::txnid::TransactionIDCache;
 
@@ -63,50 +62,10 @@ impl ApplicationServiceState {
 }
 
 // Build the router with Warp filters
-fn build_router(state: Arc<Mutex<ApplicationServiceState>>) -> impl Filter<Extract = impl warp::Reply> + Clone {
+fn build_router(state: Arc<Mutex<ApplicationServiceState>>) -> impl Filter<Extract = ()> + Clone {
     let state_filter = warp::any().map(move || state.clone());
 
-    warp::path("_matrix")
-        .and(
-            warp::path("app")
-                .and(warp::path("v1"))
-                .and(
-                    warp::path("transactions")
-                        .and(warp::path::param())
-                        .and(state_filter.clone())
-                        .and(warp::put())
-                        .and_then(put_transaction)
-                        .or(warp::path("rooms")
-                            .and(warp::path::param())
-                            .and(state_filter.clone())
-                            .and(warp::get())
-                            .and_then(get_room))
-                        .or(warp::path("users")
-                            .and(warp::path::param())
-                            .and(state_filter.clone())
-                            .and(warp::get())
-                            .and_then(get_user))
-                        .or(warp::path("ping")
-                            .and(warp::post())
-                            .and(warp::header::headers_cloned()) // Adds headers as an argument
-                            .and(warp::body::json())         // Pass entire request as `Bytes`
-                            .and(state_filter.clone())
-                            .and_then(post_ping))
-                ),
-        )
-        .or(warp::path("_matrix")
-                .and(warp::path("mau"))
-                .and(
-                    warp::path("live")
-                        .and(warp::get())
-                        .and(state_filter.clone())
-                        .and_then(get_live),
-                )
-                .or(warp::path("ready")
-                    .and(warp::get())
-                    .and(state_filter.clone())
-                    .and_then(get_ready)),
-        )
+    warp::any()
 }
 
 
