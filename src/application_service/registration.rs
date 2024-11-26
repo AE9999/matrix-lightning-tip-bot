@@ -3,7 +3,6 @@ use rand::{distributions::Alphanumeric, Rng};
 use std::{fs, io};
 use std::path::Path;
 use serde_yaml;
-use regex::Regex;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Registration {
